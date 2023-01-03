@@ -110,9 +110,9 @@ int main(int argc, char **argv)
         
         for(int i = 0; i < ntracks; i++) {
             pid.push_back(stoi(row[3 + 4*i]));
-            px.push_back(stod(row[4 + 4*i]));
-            py.push_back(stod(row[5 + 4*i]));
-            pz.push_back(stod(row[6 + 4*i]));
+            px.push_back(1000.*stod(row[4 + 4*i]));
+            py.push_back(1000.*stod(row[5 + 4*i]));
+            pz.push_back(1000.*stod(row[6 + 4*i]));
         }
         
         // print summary
@@ -131,7 +131,17 @@ int main(int argc, char **argv)
         PidPerTrackPerVertex.push_back(pid); // must be generalized for MV
         vg->SetPidPerTrackPerVertex(PidPerTrackPerVertex);
         
+        std::vector<std::vector<double> > PxPerTrackPerVertex;
+        std::vector<std::vector<double> > PyPerTrackPerVertex;
+        std::vector<std::vector<double> > PzPerTrackPerVertex;
+        PxPerTrackPerVertex.push_back(px);
+        PyPerTrackPerVertex.push_back(py);
+        PzPerTrackPerVertex.push_back(pz);
+        vg->SetPxPyPzPerTrackPerVertex(PxPerTrackPerVertex, PyPerTrackPerVertex, PzPerTrackPerVertex);
+
+        
         vg->Generate();
+        
         
         const int nVtx = vg->GetNumOfVertex();
         NVertex = nVtx;

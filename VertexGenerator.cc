@@ -55,9 +55,51 @@ void VertexGenerator::InitiParticleType()
     // pi0
     mass = 134.9770; 
     fParticle.push_back(std::make_tuple(111, mass, 0.));
+    // e+
+    mass = 0.5109989461;
+    fParticle.push_back(std::make_tuple(-11, mass, kChThrFac*mass));
+    // gamma
+    mass = 0.;
+    fParticle.push_back(std::make_tuple(22, mass, 0.));
+    // p
+    mass = 938.272;
+    fParticle.push_back(std::make_tuple(2212, mass, kChThrFac*mass));
+
 
     fNParType = (int)fParticle.size();
 }
+
+double VertexGenerator::KchFromPid(int pid)
+{
+    double kch = 0;
+    if (pid == 11) kch = std::get<2>(fParticle[0]);
+    if (pid == 13) kch = std::get<2>(fParticle[1]);
+    if (pid == -211) kch = std::get<2>(fParticle[2]);
+    if (pid == 211) kch = std::get<2>(fParticle[3]);
+    if (pid == 111) kch = std::get<2>(fParticle[4]);
+    if (pid == -11) kch = std::get<2>(fParticle[5]);
+    if (pid == 22) kch = std::get<2>(fParticle[6]);
+    if (pid == 2212) kch = std::get<2>(fParticle[7]);
+
+    return kch;
+}
+
+double VertexGenerator::MassFromPid(int pid)
+{
+    double mass = 0;
+    if (pid == 11) mass = std::get<1>(fParticle[0]);
+    if (pid == 13) mass = std::get<1>(fParticle[1]);
+    if (pid == -211) mass = std::get<1>(fParticle[2]);
+    if (pid == 211) mass = std::get<1>(fParticle[3]);
+    if (pid == 111) mass = std::get<1>(fParticle[4]);
+    if (pid == -11) mass = std::get<1>(fParticle[5]);
+    if (pid == 22) mass = std::get<1>(fParticle[6]);
+    if (pid == 2212) mass = std::get<1>(fParticle[7]);
+    
+    return mass;
+}
+
+
 
 
 TVector3 VertexGenerator::DrawVertexPosition()
@@ -71,10 +113,14 @@ TVector3 VertexGenerator::DrawVertexPosition()
     return v;
 }
 
-TVector3 VertexGenerator::DrawDirection()
+TVector3 VertexGenerator::DrawDirection(double px, double py, double pz)
 {
     double x, y, z;
-    fRand->Sphere(x, y, z, 1.);
+    double p = TMath::Sqrt(px*px + py*py + pz*pz);
+    x = px/p;
+    y = py/p;
+    z = pz/p;
+    
     TVector3 v(x,y,z);
     v.RotateX(fRotXAngle);
     return v;
@@ -101,6 +147,9 @@ void VertexGenerator::DrawParticleType(int &pdg, double &kch)
     pdg = std::get<0>(fParticle[idx]);
     kch = std::get<2>(fParticle[idx]);
 }
+
+
+
 
 
 double VertexGenerator::DrawVisEnergy(double &EvisRemain)
@@ -133,7 +182,9 @@ void VertexGenerator::Generate()
     // double TotalVisibleEnergy = fRand->Uniform(fMaxTotalEvisPerEvent);
 
     int pdg;
-    double kch;
+    double kch, mass;
+    double px, py, pz;
+    
     for(int i=0; i<NVertex; i++)
     {
         pos = this->DrawVertexPosition();
@@ -150,13 +201,22 @@ void VertexGenerator::Generate()
         for(int j=0; j<nTracks; j++)
         {
             // this->DrawParticleType(pdg, kch);
-            pdf = PidPerTrackPerVertex[i][j];
-            // kch = TO DO 
+            pdg = PidPerTrackPerVertex[i][j];
+            kch = KchFromPid(pdg);
+            mass = MassFromPid(pdg);
             
-            TVector3 dir = this->DrawDirection();
-            double evis = this->DrawVisEnergy(TotalVisibleEnergy);
-            if( i==NVertex-1 && j==nTracks-1 ){ evis +=TotalVisibleEnergy ; }
-            double ekin = evis + kch;
+            px = PxPerTrackPerVertex[i][j];
+            py = PyPerTrackPerVertex[i][j];
+            pz = PzPerTrackPerVertex[i][j];
+            TVector3 dir = this->DrawDirection(px, py, pz);
+            
+            double ekin = TMath::Sqrt(px*px + py*py + pz*pz + mass*mass) - mass;
+            double evis = ekin - kch;
+            
+            // double evis = this->DrawVisEnergy(TotalVisibleEnergy);
+            // if( i==NVertex-1 && j==nTracks-1 ){ evis +=TotalVisibleEnergy ; }
+            // double ekin = evis + kch;
+            
             v->AddVisTrack(pdg, evis, ekin, dir);
         }
         fVtxVector.push_back(v);
