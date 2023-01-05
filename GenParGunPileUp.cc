@@ -90,65 +90,80 @@ int main(int argc, char **argv)
     
     
     
-    while(file >> line) {
-        row.clear();
-        
-        std::stringstream s(line); // used for breaking words
-        
-        // read every column data of a row and store it in a string variable, 'data'
-        while (getline(s, data, ',')) {
-            // add all the column data of a row to a vector
-            row.push_back(data);
-        }
-        
-        double Enu = stod(row[0]);
-        double Etotvis = stod(row[1]);
-        int ntracks = stoi(row[2]);
-        
-        std::vector<int> pid;
-        std::vector<double> px, py, pz;
-        
-        for(int i = 0; i < ntracks; i++) {
-            pid.push_back(stoi(row[3 + 4*i]));
-            px.push_back(1000.*stod(row[4 + 4*i]));
-            py.push_back(1000.*stod(row[5 + 4*i]));
-            pz.push_back(1000.*stod(row[6 + 4*i]));
-        }
-        
-        // print summary
-        /*
-         std::cout << "Event number: " << nevents << std::endl;
-         std::cout << "Enu = " << Enu << ", Etotvis = " << Etotvis << ", ntracks = " << ntracks << std::endl;
-         std::cout << "tracks (pid, px, py, pz): " << std::endl;
-         for(int i = 0; i < ntracks; i++) std::cout << pid[i] << ", " << px[i] <<  ", " << py[i] << ", " << pz[i] << std::endl;
-         */
+    std::vector<int> NumTracksPerVertex;
+    std::vector<std::vector<int>> PidPerTrackPerVertex;
+    std::vector<std::vector<double> > PxPerTrackPerVertex;
+    std::vector<std::vector<double> > PyPerTrackPerVertex;
+    std::vector<std::vector<double> > PzPerTrackPerVertex;
 
-        std::vector<int> NumTracksPerVertex;
-        NumTracksPerVertex.push_back(ntracks); // must be generalized for MV
+    bool endoffile = false;
+    
+    while(true) {
+        NumTracksPerVertex.clear();
+        PidPerTrackPerVertex.clear();
+        PxPerTrackPerVertex.clear();
+        PyPerTrackPerVertex.clear();
+        PzPerTrackPerVertex.clear();
+
+        // reading the event from the csv file
+        for (int nn = 0; nn < fMaxVertexPerEvent; nn++) {
+            endoffile = !(file >> line);
+            if (endoffile) break;
+            
+            row.clear();
+            std::stringstream s(line); // used for breaking words
+            
+            // read every column data of a row and store it in a string variable, 'data'
+            while (getline(s, data, ',')) {
+                // add all the column data of a row to a vector
+                row.push_back(data);
+            }
+            
+            double Enu = stod(row[0]);
+            double Etotvis = stod(row[1]);
+            int ntracks = stoi(row[2]);
+            
+            std::vector<int> pid;
+            std::vector<double> px, py, pz;
+            
+            for(int i = 0; i < ntracks; i++) {
+                pid.push_back(stoi(row[3 + 4*i]));
+                px.push_back(1000.*stod(row[4 + 4*i]));
+                py.push_back(1000.*stod(row[5 + 4*i]));
+                pz.push_back(1000.*stod(row[6 + 4*i]));
+            }
+            
+            NumTracksPerVertex.push_back(ntracks);
+            PidPerTrackPerVertex.push_back(pid);
+            PxPerTrackPerVertex.push_back(px);
+            PyPerTrackPerVertex.push_back(py);
+            PzPerTrackPerVertex.push_back(pz);
+
+/*
+            std::cout << Enu << " " << Etotvis << " " << ntracks << " ";
+            for (int k = 0; k < pid.size(); k++) {
+                std::cout << pid[k] << " " << px[k] << " " << py[k] << " " << pz[k] << " ";
+            }
+            std::cout << std::endl;
+*/
+
+        }
+        if (endoffile) break;
+        
+        
         vg->SetNumTracksPerVertex(NumTracksPerVertex);
-        
-        std::vector<std::vector<int>> PidPerTrackPerVertex;
-        PidPerTrackPerVertex.push_back(pid); // must be generalized for MV
         vg->SetPidPerTrackPerVertex(PidPerTrackPerVertex);
-        
-        std::vector<std::vector<double> > PxPerTrackPerVertex;
-        std::vector<std::vector<double> > PyPerTrackPerVertex;
-        std::vector<std::vector<double> > PzPerTrackPerVertex;
-        PxPerTrackPerVertex.push_back(px);
-        PyPerTrackPerVertex.push_back(py);
-        PzPerTrackPerVertex.push_back(pz);
         vg->SetPxPyPzPerTrackPerVertex(PxPerTrackPerVertex, PyPerTrackPerVertex, PzPerTrackPerVertex);
-
         
         vg->Generate();
         
         
         const int nVtx = vg->GetNumOfVertex();
         NVertex = nVtx;
-
+        
         int n = 0;
         float evisTot = 0.;
-
+        
         gr->grNPart = 0;
         for(int j=0; j<nVtx; j++)
         {
@@ -166,6 +181,7 @@ int main(int argc, char **argv)
                 {
                     gr->grPos[n][l] = vtx->GetPosition(l);
                     gr->grDir[n][l] = vtx->GetDirection(k, l);
+
                 }
                 gr->grFlagToSim[n] = true;
                 gr->grVtxId[n] = j;
@@ -182,6 +198,7 @@ int main(int argc, char **argv)
         
         nevents++;
     }
+    
     
 
     TFile *fout = new TFile(fOutFileName.c_str(), "recreate");
